@@ -1,6 +1,7 @@
 package io.hhplus.tdd.point.service;
 
 import io.hhplus.tdd.database.UserPointTable;
+import io.hhplus.tdd.exception.TddCustomException;
 import io.hhplus.tdd.point.UserPoint;
 import io.hhplus.tdd.point.dto.UserPointDto;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.assertj.core.api.Assertions.*;
 
 /**
- * 포인트 조회 기능 테스트
+ * 포인트 조회 테스트
  */
 public class PointServiceTest {
     private static final Logger logger = LoggerFactory.getLogger(PointServiceTest.class);
@@ -27,7 +28,7 @@ public class PointServiceTest {
      * 단, id는 1 ~ 5까지 정수
      */
     @BeforeEach
-    public void addUserData() {
+    public void setup() {
         for (int i = 0; i < 5; i++) {
             userPointTable.insertOrUpdate((long)(i+1), 0L);
         }
@@ -64,24 +65,73 @@ public class PointServiceTest {
         //조회 요청한 유저와 DB 조회한 유저의 id가 같다
         assertEquals(requestUser.getId(), dbUser.id());
         //포인트 조회에 성공한다.
-        assertNotNull(dbUser.point());
+        assertNotNull(dbUser.toDto().getPoint());
     }
 
     /**
-     * 포인트 조회 - 유저 조회 실패
+     * RuntimeException 예외 발생 테스트
      */
     @Test
-    void notFoundUser() {
-        logger.info("[포인트 조회 실패 테스트] notFoundUser");
+    public void exceptionTest() {
         //given
         UserPointDto dto = createUser();
 
         //when
-        //DB에 없는 유저 조회
-        UserPoint dbUser = userPointTable.selectById(dto.getId());
-        dbUser = null;
+        Throwable exception = assertThrows(Exception.class, () -> {
+            userPointTable.selectById(dto.getPoint());
+            throw new RuntimeException("에러 발생");
+        });
+
+        logger.info(String.valueOf(exception instanceof Exception));
+        logger.info(String.valueOf(exception instanceof RuntimeException));
+        logger.info(String.valueOf(exception instanceof NullPointerException));
 
         //then
-        assertNull(dbUser);
+        assertEquals("에러 발생", exception.getMessage());
+        assertInstanceOf(RuntimeException.class, exception);
+        assertInstanceOf(Exception.class, exception);
+    }
+
+    /**
+     * DB 조회한 유저가 NULL인 경우 예외 발생 테스트 (throw)
+     */
+    @Test
+    public void throwExceptionTest() {
+        // given
+        UserPoint dbUserPointEntity = null;
+
+        //when
+        Throwable exception = assertThrows(NullPointerException.class, () -> {
+            UserPointDto dbUser = dbUserPointEntity.toDto();
+        });
+        logger.info(String.valueOf(exception instanceof RuntimeException));
+        logger.info(String.valueOf(exception instanceof NullPointerException));
+
+        //then
+        assertInstanceOf(NullPointerException.class, exception);
+    }
+
+    /**
+     * DB 조회한 유저가 NULL인 경우 커스텀 예외 처리 테스트 (try-catch)
+     */
+    @Test
+    public void tryCatchTest() {
+        // given
+        UserPoint dbUserPointEntity = null;
+
+        //when
+        Throwable exception = assertThrows(RuntimeException.class, () -> {
+            try {
+                UserPointDto dbUser = dbUserPointEntity.toDto();
+            } catch (NullPointerException e) {
+                throw new TddCustomException("err-01", "DB에 유저가 존재하지 않습니다.");
+            }
+        });
+        logger.info(String.valueOf(exception instanceof RuntimeException));
+        logger.info(String.valueOf(exception instanceof NullPointerException));
+
+        //then
+        assertInstanceOf(RuntimeException.class, exception);
+        assertEquals("DB에 유저가 존재하지 않습니다.", exception.getMessage());
     }
 }
