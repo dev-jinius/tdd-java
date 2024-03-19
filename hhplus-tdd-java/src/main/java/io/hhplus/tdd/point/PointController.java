@@ -5,6 +5,7 @@ import io.hhplus.tdd.point.dto.UserPointDto;
 import io.hhplus.tdd.point.service.ChargeService;
 import io.hhplus.tdd.point.service.HistoryService;
 import io.hhplus.tdd.point.service.PointService;
+import io.hhplus.tdd.point.service.UseService;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +14,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
+import static org.springframework.http.MediaType.*;
 
 @RestController
 @AllArgsConstructor
@@ -24,6 +27,7 @@ public class PointController {
     private final PointService pointService;        //유저 포인트 조회 서비스
     private final HistoryService historyService;    //유저 포인트 충전 및 사용 내역 조회 서비스
     private final ChargeService chargeService;      //유저 포인트 충전 서비스
+    private final UseService useService;            //유저 포인트 사용 서비스
 
     /**
      * TODO - 특정 유저의 포인트를 조회하는 기능을 작성해주세요.
@@ -51,8 +55,8 @@ public class PointController {
     /**
      * TODO - 특정 유저의 포인트를 충전하는 기능을 작성해주세요.
      */
-    @PatchMapping(value = "{id}/charge", consumes = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<UserPointDto> charge(@PathVariable(value = "id") long id, @RequestBody long amount) {
+    @PatchMapping(value = "{id}/charge")
+    public ResponseEntity<UserPointDto> charge(@PathVariable(value = "id")long id, @RequestParam(value = "amount")long amount) {
         UserPointDto dto = chargeService.chargeUserPoint(id, amount);
         return ResponseEntity.ok().body(dto);
     }
@@ -60,8 +64,9 @@ public class PointController {
     /**
      * TODO - 특정 유저의 포인트를 사용하는 기능을 작성해주세요.
      */
-    @PatchMapping("{id}/use")
-    public UserPoint use(@PathVariable(value = "id") long id, @RequestBody long amount) {
-        return new UserPoint(0, 0, 0);
+    @PatchMapping(value = "{id}/use")
+    public ResponseEntity<UserPointDto> use(@PathVariable(value = "id")long id, @RequestParam(value = "amount")long amount) {
+        UserPointDto dto = useService.useUserPoint(id, amount);
+        return ResponseEntity.ok().body(dto);
     }
 }

@@ -32,4 +32,5 @@ class ApiControllerAdvice extends ResponseEntityExceptionHandler {
     public ResponseEntity<ErrorResponse> handlePointServiceException(TddCustomException e) {
         return ResponseEntity.status(400).body(new ErrorResponse(e.getCode(), e.getMessage()));
     }
+
 }

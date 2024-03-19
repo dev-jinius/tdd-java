@@ -29,24 +29,23 @@ public class ChargeService {
     /**
      * 포인트 충전
      * @param userId
-     * @param amount
+     * @param chargePoint
      * @return
      */
-    public UserPointDto chargeUserPoint(long userId, long amount) {
-        long totalPoint = 0;                        // 누적 포인트
-        UserPoint resultUserPoint = null;           // 충전된 유저 포인트
-        PointHistory resultPointHistory = null;     // 충전된 포인트 내역
+    public UserPointDto chargeUserPoint(long userId, long chargePoint) {
+        long totalPoint;                     // 누적 포인트
+        UserPoint resultUserPoint;           // 충전된 유저 포인트
 
         try {
             //유저의 포인트 조회
             UserPointDto originUserPoint = pointService.selectPointByUserId(userId);
-            if (!ObjectUtils.isEmpty(originUserPoint)) {
-                totalPoint = originUserPoint.getPoint() + amount;
-                //누적해서 유저 포인트 업데이트
-                resultUserPoint = stackPoint(userId, totalPoint);
-                //충전 내역 추가
-                resultPointHistory = addChargeHistory(userId, amount);
-            }
+            totalPoint = originUserPoint.getPoint() + chargePoint;
+            log.info("기존 포인트[{}] / 충전한 포인트[{}] => 누적 포인트[{}]", originUserPoint.getPoint(), chargePoint, totalPoint);
+
+            //누적해서 유저 포인트 업데이트
+            resultUserPoint = stackPoint(userId, totalPoint);
+            //충전 내역 추가
+            addChargeHistory(userId, chargePoint);
 
             return resultUserPoint.toDto();
         } catch (NumberFormatException e) {

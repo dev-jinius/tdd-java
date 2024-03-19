@@ -84,7 +84,7 @@ public class ChargeServiceTest {
         logger.info("resultPointHistory {}", resultPointHistory.toDto().toString());
 
         //then
-        //충전한 유저 포인트는 기존에 있는 포인트와 요청 금액을 합친 값과 같다.
+        //충전 후 유저 포인트는 기존에 있는 포인트와 요청 포인트를 합친 값과 같다.
         //유저 포인트 테이블과 포인트 내역 테이블에 모두 추가되어야 한다.
         assertEquals(resultUserPoint.point(), totalPoint);
         assertNotNull(resultUserPoint);
@@ -159,10 +159,10 @@ public class ChargeServiceTest {
 
     /**
      * 포인트 충전 내역 추가
-     * @param UserPointDto
-     * @return
+     * @param userPointDto
+     * @return PointHistory
      */
-    public PointHistory addChargeHistory(UserPointDto UserPointDto) {
-        return pointHistoryTable.insert(UserPointDto.getId(), UserPointDto.getPoint(), CHARGE, System.currentTimeMillis());
+    public PointHistory addChargeHistory(UserPointDto userPointDto) {
+        return pointHistoryTable.insert(userPointDto.getId(), userPointDto.getPoint(), CHARGE, System.currentTimeMillis());
     }
 }
