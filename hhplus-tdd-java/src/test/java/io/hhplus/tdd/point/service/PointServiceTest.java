@@ -51,13 +51,13 @@ public class PointServiceTest {
      *  포인트 조회 - 성공
      */
     @Test
-    void selectPointByUserId() {
+    void selectPoint() {
         logger.info("[포인트 조회 테스트] selectPointByUserId");
         //given
         UserPointDto requestUser = createUser();    //사용자 생성
         
         //when
-        UserPoint dbUser = userPointTable.selectById(requestUser.getId());
+        UserPoint dbUser = selectUserPointByUserId(requestUser.getId());
 
         //then
         //요청한 유저의 id로 DB 조회한 유저가 존재한다.
@@ -66,6 +66,12 @@ public class PointServiceTest {
         assertEquals(requestUser.getId(), dbUser.id());
         //포인트 조회에 성공한다.
         assertNotNull(dbUser.toDto().getPoint());
+    }
+    /**
+     * 유저 포인트 DB 조회
+     */
+    public UserPoint selectUserPointByUserId(long userId) {
+        return userPointTable.selectById(userId);
     }
 
     /**
@@ -93,10 +99,11 @@ public class PointServiceTest {
     }
 
     /**
+     * 유저 포인트 DB 조회 - 실패
      * DB 조회한 유저가 NULL인 경우 예외 발생 테스트 (throw)
      */
     @Test
-    public void throwExceptionTest() {
+    public void notFoundUser() {
         // given
         UserPoint dbUserPointEntity = null;
 
@@ -104,8 +111,11 @@ public class PointServiceTest {
         Throwable exception = assertThrows(NullPointerException.class, () -> {
             UserPointDto dbUser = dbUserPointEntity.toDto();
         });
-        logger.info(String.valueOf(exception instanceof RuntimeException));
-        logger.info(String.valueOf(exception instanceof NullPointerException));
+        logger.info(exception.toString());
+        logger.info("exception == RuntimeException ? [{}]", String.valueOf(exception instanceof RuntimeException));
+        logger.info("exception == NullPointerException ? [{}]", String.valueOf(exception instanceof NullPointerException));
+        logger.info("exception == TddCustomException ? [{}]", String.valueOf(exception instanceof TddCustomException));
+
 
         //then
         assertInstanceOf(NullPointerException.class, exception);
@@ -120,18 +130,19 @@ public class PointServiceTest {
         UserPoint dbUserPointEntity = null;
 
         //when
-        Throwable exception = assertThrows(RuntimeException.class, () -> {
+        Throwable exception = assertThrows(TddCustomException.class, () -> {
             try {
                 UserPointDto dbUser = dbUserPointEntity.toDto();
             } catch (NullPointerException e) {
                 throw new TddCustomException("err-01", "DB에 유저가 존재하지 않습니다.");
             }
         });
+        logger.info(String.valueOf(exception instanceof TddCustomException));
         logger.info(String.valueOf(exception instanceof RuntimeException));
         logger.info(String.valueOf(exception instanceof NullPointerException));
 
         //then
-        assertInstanceOf(RuntimeException.class, exception);
+        assertInstanceOf(TddCustomException.class, exception);
         assertEquals("DB에 유저가 존재하지 않습니다.", exception.getMessage());
     }
 }
