@@ -5,6 +5,7 @@ import io.hhplus.tdd.point.PointHistory;
 import io.hhplus.tdd.point.TransactionType;
 import io.hhplus.tdd.point.dto.PointHistoryDto;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -19,7 +20,7 @@ import static io.hhplus.tdd.point.TransactionType.USE;
  * 포인트 충전/이용 내역 조회 서비스
  */
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class HistoryService {
     private static final Logger log = LoggerFactory.getLogger(PointService.class);
 
