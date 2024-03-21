@@ -5,7 +5,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
 
-
 @SpringBootApplication
 @AutoConfigureMockMvc
 public class PointControllerTest {
@@ -14,6 +13,5 @@ public class PointControllerTest {
 
     @Test
     public void PathVariableTest() {
-        String url = "/point/aaa";
     }
 }

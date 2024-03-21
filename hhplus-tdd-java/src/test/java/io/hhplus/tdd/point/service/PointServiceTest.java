@@ -8,11 +8,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.util.ObjectUtils;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.assertj.core.api.Assertions.*;
 
 /**
  * 포인트 조회 테스트
