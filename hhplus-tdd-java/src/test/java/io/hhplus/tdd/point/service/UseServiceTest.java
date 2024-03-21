@@ -10,11 +10,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.ObjectUtils;
 
-import static io.hhplus.tdd.point.TransactionType.CHARGE;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import static io.hhplus.tdd.point.TransactionType.USE;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * 포인트 사용 서비스 테스트
@@ -25,8 +30,9 @@ public class UseServiceTest {
 
     private UserPointTable userPointTable = new UserPointTable();
     private PointHistoryTable pointHistoryTable = new PointHistoryTable();
-    private PointServiceTest pointServiceTest = new PointServiceTest();
-
+    private PointService pointService = new PointService(userPointTable);
+    private UseService useService = new UseService(userPointTable, pointHistoryTable, pointService);
+    private ChargeService chargeService = new ChargeService(userPointTable, pointHistoryTable, pointService);
     /**
      * DB 유저 더미 데이터 생성
      * 단, id는 1 ~ 5까지 정수
@@ -67,9 +73,9 @@ public class UseServiceTest {
 
         //when
         //유저의 포인트 조회
-        UserPoint originUserPoint = pointServiceTest.selectUserPointByUserId(requestUser.getId());
+        UserPointDto originUserPoint = pointService.selectPointByUserId(requestUser.getId());
         //남은 포인트를 크게 해서 포인트 부족한 예외를 제외시킴.
-        UserPointDto dto = originUserPoint.toDto();
+        UserPointDto dto = originUserPoint;
         dto.setPoint(999999L);
 
         totalPoint = dto.getPoint() - usePoint;
@@ -92,6 +98,45 @@ public class UseServiceTest {
     }
 
     /**
+     * 여러 건의 포인트 사용 요청이 들어오는 경우, 순차적 처리 테스트 (synchronized)
+     */
+    @Test
+    public void synchronizedUseTest() throws InterruptedException {
+        long userId = 1L;
+        int core = 10;
+        ExecutorService es = Executors.newFixedThreadPool(core);  //스레드 개수 기준은 CPU 코어 개수
+        CountDownLatch latch = new CountDownLatch(core);
+        List<String> startThreadList = new ArrayList<>();         //작업 시작한 스레드 이름 순서 리스트
+        List<String> finishedThreadList = new ArrayList<>();      //작업 완료한 스레드이름 순서 리스트
+
+        chargeService.chargeUserPoint(userId, 1000000); //포인트 부족 예외 방지
+
+        for(int i = 0; i < core; i++) {
+            long usePoint = (long)(Math.random()*5+1)*1000; //사용 랜덤 포인트
+            long cnt = i+1;
+            es.submit(() -> {
+                synchronized (useService) {
+                    logger.info("번호 {} 시작 스레드 : [{}]", cnt, Thread.currentThread().getName());
+                    startThreadList.add(Thread.currentThread().getName());
+                    try {
+                        useService.useUserPoint(userId, usePoint);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    } finally {
+                        logger.info("번호 {} 완료 스레드 : [{}]", cnt, Thread.currentThread().getName());
+                        finishedThreadList.add(Thread.currentThread().getName());
+                        latch.countDown();
+                    }
+                }
+            });
+        }
+        latch.await();
+        es.shutdown();
+
+        assertThat(startThreadList).isEqualTo(finishedThreadList);
+    }
+
+    /**
      * 포인트 사용 실패
      * - 남은 유저 포인트보다 사용 포인트가 더 큰 경우
      */
@@ -100,15 +145,15 @@ public class UseServiceTest {
         //given
         UserPointDto requestUser = createUser();
         long usePoint = requestUser.getPoint();         // 요청한 사용할 포인트
-        logger.info("{} - {} = {}", Long.parseLong("1"), Long.parseLong("10"), Long.parseLong("1")-Long.parseLong("10"));
+
         //when
         Throwable exception = assertThrows(TddCustomException.class, () -> {
             long totalPoint;                            // 누적 포인트
 
             //유저의 포인트 조회
-            UserPoint originUserPoint = pointServiceTest.selectUserPointByUserId(requestUser.getId());
-            totalPoint = originUserPoint.point() - usePoint;
-            logger.info("{} - {} = {}", originUserPoint.point(), usePoint, originUserPoint.point()-usePoint);
+            UserPointDto originUserPoint = pointService.selectPointByUserId(requestUser.getId());
+            totalPoint = originUserPoint.getPoint() - usePoint;
+            logger.info("차감 후 포인트 조회 : {}", originUserPoint.getPoint()-usePoint);
 
             //사용할 포인트를 차감한 누적 포인트가 0보다 크거나 같아야 한다.
             if (totalPoint < 0) throw new TddCustomException("err-03", "포인트가 부족합니다.");

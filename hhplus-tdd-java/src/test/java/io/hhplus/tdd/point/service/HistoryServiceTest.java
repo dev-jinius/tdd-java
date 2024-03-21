@@ -15,7 +15,6 @@ import java.util.stream.Stream;
 import static io.hhplus.tdd.point.TransactionType.CHARGE;
 import static io.hhplus.tdd.point.TransactionType.USE;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.tuple;
 
 /**
  * 포인트 충전/사용 내역 조회 테스트

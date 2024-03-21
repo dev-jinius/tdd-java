@@ -41,7 +41,7 @@ public class UseService {
             //유저의 포인트 조회
             UserPointDto originUserPointDto = pointService.selectPointByUserId(userId);
             //남은 포인트를 크게 해서 포인트 부족한 예외를 제외시킴.
-            originUserPointDto.setPoint(999999L);
+//            originUserPointDto.setPoint(999999L);
 
             totalPoint = originUserPointDto.getPoint() - usePoint;
             log.info("기존 포인트[{}] / 사용한 포인트[{}] => 누적 포인트[{}]", originUserPointDto.getPoint(), usePoint, totalPoint);

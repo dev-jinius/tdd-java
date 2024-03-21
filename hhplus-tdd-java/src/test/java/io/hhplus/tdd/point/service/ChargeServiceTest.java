@@ -4,31 +4,34 @@ import io.hhplus.tdd.database.PointHistoryTable;
 import io.hhplus.tdd.database.UserPointTable;
 import io.hhplus.tdd.exception.TddCustomException;
 import io.hhplus.tdd.point.PointHistory;
-import io.hhplus.tdd.point.TransactionType;
 import io.hhplus.tdd.point.UserPoint;
 import io.hhplus.tdd.point.dto.UserPointDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.TypeMismatchException;
-import org.springframework.core.NestedCheckedException;
 import org.springframework.util.ObjectUtils;
 
-import java.io.UncheckedIOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.*;
 
 import static io.hhplus.tdd.point.TransactionType.CHARGE;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+
 
 /**
  * 포인트 충전 서비스 테스트
  */
+
 public class ChargeServiceTest {
     private static final Logger logger = LoggerFactory.getLogger(ChargeServiceTest.class);
 
-    private UserPointTable userPointTable = new UserPointTable();
-    private PointHistoryTable pointHistoryTable = new PointHistoryTable();
-    private PointServiceTest pointServiceTest = new PointServiceTest();
+    private final UserPointTable userPointTable = new UserPointTable();
+    private final PointHistoryTable pointHistoryTable = new PointHistoryTable();
+    private final PointService pointService = new PointService(userPointTable);
+    private final ChargeService chargeService = new ChargeService(userPointTable, pointHistoryTable, pointService);
 
     /**
      * DB 유저 더미 데이터 생성
@@ -37,7 +40,7 @@ public class ChargeServiceTest {
     @BeforeEach
     public void setup() {
         for (int i = 0; i < 5; i++) {
-            userPointTable.insertOrUpdate((long)(i+1), 0L);
+            userPointTable.insertOrUpdate(i+1, 0L);
         }
         logger.info("테스트 유저 데이터 생성");
     }
@@ -71,15 +74,15 @@ public class ChargeServiceTest {
 
         //when
         //유저의 포인트 조회
-        UserPoint originUserPoint = pointServiceTest.selectUserPointByUserId(requestUser.getId());
+        UserPointDto originUserPoint = pointService.selectPointByUserId(requestUser.getId());
         if (!ObjectUtils.isEmpty(originUserPoint)) {
-            totalPoint = originUserPoint.point() + chargePoint;
+            totalPoint = originUserPoint.getPoint() + chargePoint;
             //누적해서 유저 포인트 업데이트
             resultUserPoint = stackPoint(requestUser.getId(), totalPoint);
             //충전 내역 추가
             resultPointHistory = addChargeHistory(requestUser);
         }
-        logger.info("기존 포인트[{}] / 충전한 포인트[{}] => 누적 포인트[{}]", originUserPoint.point(), chargePoint, totalPoint);
+        logger.info("기존 포인트[{}] / 충전한 포인트[{}] => 누적 포인트[{}]", originUserPoint.getPoint(), chargePoint, totalPoint);
         logger.info("UserPoint {}", resultUserPoint.toDto().toString());
         logger.info("resultPointHistory {}", resultPointHistory.toDto().toString());
 
@@ -92,12 +95,38 @@ public class ChargeServiceTest {
     }
 
     /**
-     * 포인트 충전 - 실패
-     * DB 조회한 유저가 NULL인 경우 예외 발생 테스트 (throw)
+     * 여러 건의 포인트 충전 요청이 들어오는 경우, 순차적 처리 테스트 (synchronized)
      */
     @Test
-    public void notFoundUser() {
-        pointServiceTest.notFoundUser();
+    public void synchronizedChargeTest() throws InterruptedException {
+        long userId = 1L;
+        int core = 10;
+        ExecutorService executor = Executors.newFixedThreadPool(core);
+        CountDownLatch latch = new CountDownLatch(core);
+        List<String> startThreadList = new ArrayList<>();
+        List<String> finishedThreadList = new ArrayList<>();
+
+        for (int i = 0; i < core; i++) {
+            long chargePoint = (long)(Math.random()*5+1)*1000;
+            executor.submit(() -> {
+                synchronized (chargeService) {
+                    logger.info("현재 스레드 : [{}]", Thread.currentThread().getName());
+                    startThreadList.add(Thread.currentThread().getName());
+                    try {
+                        chargeService.chargeUserPoint(userId, chargePoint);
+                    } catch (Exception e) {
+                    } finally {
+                        logger.info("완료한 스레드 : [{}]", Thread.currentThread().getName());
+                        finishedThreadList.add(Thread.currentThread().getName());
+                        latch.countDown();
+                    }
+                }
+            });
+        }
+        latch.await();
+        executor.shutdown();
+
+        assertThat(startThreadList).isEqualTo(finishedThreadList);
     }
 
     /**
@@ -113,18 +142,10 @@ public class ChargeServiceTest {
             userPointTable.insertOrUpdate(param, 1000L);
         });
         logger.info(exception.toString());
-        logger.info("exception == NumberFormatException ? [{}]", String.valueOf(exception instanceof NumberFormatException));
+        logger.info("exception == NumberFormatException ? [{}]", exception instanceof NumberFormatException);
 
         //then
         assertInstanceOf(NumberFormatException.class, exception);
-    }
-
-    /**
-     * DB 조회한 유저가 NULL인 경우 커스텀 예외 처리 테스트 (try-catch)
-     */
-    @Test
-    public void tryCatchNotFoundUser() {
-        pointServiceTest.tryCatchTest();
     }
 
     /**
