@@ -31,7 +31,7 @@ public class ChargeService {
      * @param chargePoint
      * @return
      */
-    public UserPointDto chargeUserPoint(long userId, long chargePoint) {
+    public synchronized UserPointDto chargeUserPoint(long userId, long chargePoint) {
         long totalPoint;                     // 누적 포인트
         UserPoint resultUserPoint;           // 충전된 유저 포인트
         try {

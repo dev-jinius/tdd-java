@@ -32,7 +32,7 @@ public class UseService {
      * @param usePoint
      * @return
      */
-    public UserPointDto useUserPoint(long userId, long usePoint) {
+    public synchronized UserPointDto useUserPoint(long userId, long usePoint) {
         long totalPoint = 0;                            // 누적 포인트
         UserPoint resultUserPoint = null;               // 포인트 사용 후 남은 포인트
         PointHistory resultPointHistory = null;         // 포인트 사용 후 추가된 포인트 내역

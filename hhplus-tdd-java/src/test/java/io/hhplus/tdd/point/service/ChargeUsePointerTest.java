@@ -46,7 +46,7 @@ public class ChargeUsePointerTest {
         for (int i = 0; i < core; i++) {
             long chargePoint = (long)(Math.random()*5+1)*1000;
             executor.submit(() -> {
-                synchronized (chargeService) {
+                synchronized (this) {
                     long randomNum = (long)(Math.random()*2+1);
                     logger.info("randomNum : [{}]", randomNum);
                     logger.info("현재 스레드 : [{}]", Thread.currentThread().getName());
