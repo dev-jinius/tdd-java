@@ -44,7 +44,7 @@ public class ChargeService {
             //충전 내역 추가
             addChargeHistory(userId, chargePoint);
             return resultUserPoint.toDto();
-
+            //pull request test
         } catch (NumberFormatException e) {
             throw new TddCustomException("err-02", "DB 파라미터의 타입과 맞지 않습니다.");
         } catch (NullPointerException e) {
