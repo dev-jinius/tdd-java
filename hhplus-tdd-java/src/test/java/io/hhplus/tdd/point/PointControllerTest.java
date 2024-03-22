@@ -8,5 +8,10 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootApplication
 @AutoConfigureMockMvc
 public class PointControllerTest {
-    //After pull reqeust, feature branch could be deleted! TEST!!
+
+    MockMvc mockMvc;
+
+    @Test
+    public void PathVariableTest() {
+    }
 }
